@@ -1,3 +1,6 @@
+"""
+To run: python3 Plot_mean_March2023.py
+"""
 import sys
 
 if sys.version_info[0] < 3:
@@ -44,12 +47,15 @@ tree_corr = f_corr.Get(Tree1_Corrected)
 # Define the cuts
 cut_configs = [
     # pattern of below array: (suffix, suffix_symbol, nBins, minX, maxX, pt_low, pt_high, etaCutVal)
-    ("Barrel", "<", 108, 0.50, 1.20, 10, 20, 1.479),
-    ("Barrel", "<", 108, 0.65, 1.15, 20, 60, 1.479),
-    ("Barrel", "<", 108, 0.80, 1.07, 60, 200, 1.479),
+    ("Barrel", "<", 108, 0.40, 1.20, 10, 20, 1.479),
+    ("Barrel", "<", 108, 0.55, 1.15, 20, 60, 1.479),
+    ("Barrel", "<", 108, 0.70, 1.07, 60, 200, 1.479),
     ("Endcap", ">", 108, 0.30, 1.40, 10, 20, 1.479),
-    ("Endcap", ">", 108, 0.55, 1.20, 20, 60, 1.479),
-    ("Endcap", ">", 108, 0.70, 1.15, 60, 200, 1.479),
+    ("Endcap", ">", 108, 0.45, 1.20, 20, 60, 1.479),
+    ("Endcap", ">", 108, 0.60, 1.15, 60, 200, 1.479),
+
+    # ("Barrel", "<", 108, 0.70, 1.07, 20, 200, 1.479),
+    # ("Endcap", ">", 108, 0.60, 1.15, 20, 200, 1.479),
 ]
 
 
@@ -58,9 +64,9 @@ for suffix, suffix_symbol, nBins, minX, maxX, pt_low, pt_high, etaCutVal in cut_
     cut = f"eg_gen_pt>{pt_low} && eg_gen_pt<{pt_high} && {etaCut}"
 
     # Create histograms
-    h3_uncorr = TH1F(f"h3_uncorr_{suffix}", ";E^{reco}/E^{gen};Entries", nBins, minX, maxX)
-    h1_corr = TH1F(f"h1_corr_{suffix}", ";E^{reco}/E^{gen};Entries", nBins, minX, maxX)
-    h2_corr = TH1F(f"h2_corr_{suffix}", ";E^{reco}/E^{gen};Entries", nBins, minX, maxX)
+    h3_uncorr = TH1F(f"h3_uncorr_{suffix}", ";E^{reco}/E^{gen};Arbitrary units", nBins, minX, maxX)
+    h1_corr = TH1F(f"h1_corr_{suffix}", ";E^{reco}/E^{gen};Arbitrary units", nBins, minX, maxX)
+    h2_corr = TH1F(f"h2_corr_{suffix}", ";E^{reco}/E^{gen};Arbitrary units", nBins, minX, maxX)
 
     # Fill histograms
     tree_uncorr.Draw(f"{var3}>>h3_uncorr_{suffix}", cut)
@@ -82,40 +88,64 @@ for suffix, suffix_symbol, nBins, minX, maxX, pt_low, pt_high, etaCutVal in cut_
     h1_corr.SetMarkerColor(ROOT.kRed)
     h2_corr.SetMarkerColor(ROOT.kBlue)
 
+    # Choose different marker styles for different pt bins
+    h3_uncorr.SetMarkerStyle(20)
+    h1_corr.SetMarkerStyle(21)
+    h2_corr.SetMarkerStyle(22)
+
+
     # Get maximum Y value from three histograms, and set it as the maximum Y value for the canvas
     if suffix == "Barrel":
-        multiplicative_factor = 1.1
+        multiplicative_factor = 1.15
     else:
-        multiplicative_factor = 1.1
-    h3_uncorr.SetMaximum(ROOT.TMath.Max(h3_uncorr.GetMaximum()*multiplicative_factor,h1_corr.GetMaximum()*multiplicative_factor))
-    h3_uncorr.SetMaximum(ROOT.TMath.Max(h3_uncorr.GetMaximum()*multiplicative_factor,h2_corr.GetMaximum()*multiplicative_factor))
+        if pt_low == 10:
+            multiplicative_factor = 1.35
+        else:
+            multiplicative_factor = 1.15
+    # h3_uncorr.SetMaximum(ROOT.TMath.Max(h3_uncorr.GetMaximum()*multiplicative_factor,h1_corr.GetMaximum()*multiplicative_factor))
+    # h3_uncorr.SetMaximum(ROOT.TMath.Max(h3_uncorr.GetMaximum()*multiplicative_factor,h2_corr.GetMaximum()*multiplicative_factor))
+    h1_corr.SetMaximum(ROOT.TMath.Max(h1_corr.GetMaximum()*multiplicative_factor,h2_corr.GetMaximum()*multiplicative_factor))
 
-    h3_uncorr.Draw()
-    h1_corr.Draw("SAME")
+    # h3_uncorr.Draw()
+    h1_corr.Draw()
+    # h1_corr.Draw("SAME")
     h2_corr.Draw("SAME")
 
     # Add legend
-    leg = TLegend(0.7, 0.7, 0.9, 0.9)
-    leg.AddEntry(h3_uncorr, "Corrected run2", "lp")
-    leg.AddEntry(h1_corr, "Raw", "lp")
-    leg.AddEntry(h2_corr, "Corrected new", "lp")
-    # leg.Draw()
+    leg = TLegend(0.16, 0.78, 0.90, 0.95)
+    # Remove the border of the legend
+    leg.SetBorderSize(0)
+    # make border of legend transparent
+    leg.SetFillStyle(0)
+    # make the marker of the legend smaller
+    leg.SetTextSize(0.04)
+
+    # # Set the text color same as the line color of the histogram
+    # Add the second entry and set the text color
+    entry2 = leg.AddEntry(h2_corr, "Corrected new:  (#mu, #sigma) = (%.3f, %.3f)" % (h2_corr.GetMean(), h2_corr.GetStdDev()), "lp")
+    entry2.SetTextColor(h2_corr.GetMarkerColor())
+
+    # Add the first entry and set the text color
+    entry1 = leg.AddEntry(h1_corr, "Raw:  (#mu, #sigma) = (%.3f, %.3f)" % (h1_corr.GetMean(), h1_corr.GetStdDev()), "lp")
+    entry1.SetTextColor(h1_corr.GetMarkerColor())
+
+    leg.Draw()
 
     l = ROOT.TLatex()
     l.SetTextSize(0.040)
 
     # Add mean and standard deviation for each histogram on the canvas
     l.SetTextColor(ROOT.kBlue)
-    l.DrawLatexNDC(0.18, 0.91, "Corrected new:  (#mu, #sigma) = (%.3f,%.3f)" % (h2_corr.GetMean(), h2_corr.GetStdDev()))
-    l.SetTextColor(ROOT.kBlack)
-    l.DrawLatexNDC(0.18, 0.87, "Corrected run2: (#mu, #sigma) = (%.3f,%.3f)" % (h3_uncorr.GetMean(), h3_uncorr.GetStdDev()))
-    l.SetTextColor(ROOT.kRed)
-    l.DrawLatexNDC(0.18, 0.82, "Raw:  (#mu, #sigma) = (%.3f,%.3f)" % (h1_corr.GetMean(), h1_corr.GetStdDev()))
+    # l.DrawLatexNDC(0.18, 0.88, "Corrected new:  (#mu, #sigma) = (%.3f,%.3f)" % (h2_corr.GetMean(), h2_corr.GetStdDev()))
+    # l.SetTextColor(ROOT.kBlack)
+    # l.DrawLatexNDC(0.18, 0.87, "Corrected run2: (#mu, #sigma) = (%.3f,%.3f)" % (h3_uncorr.GetMean(), h3_uncorr.GetStdDev()))
+    # l.SetTextColor(ROOT.kRed)
+    # l.DrawLatexNDC(0.18, 0.81, "Raw:  (#mu, #sigma) = (%.3f,%.3f)" % (h1_corr.GetMean(), h1_corr.GetStdDev()))
 
     # Add the pT and eta cuts on the canvas
     l.SetTextColor(ROOT.kBlack)
-    l.DrawLatexNDC(0.18, 0.77, str(pt_low) +" < p_{T}^{gen} < " + str(pt_high))
-    l.DrawLatexNDC(0.18, 0.72,"| #eta^{gen} | " + suffix_symbol + str(etaCutVal))
+    l.DrawLatexNDC(0.18, 0.67, str(pt_low) +" GeV < p_{T}^{gen} < " + str(pt_high) + " GeV")
+    l.DrawLatexNDC(0.18, 0.62,"| #eta^{gen} | " + suffix_symbol + str(etaCutVal))
 
     # Add CMS Preliminary label
     CMS_lumi.CMS_lumi(c, iPeriod, iPos)
